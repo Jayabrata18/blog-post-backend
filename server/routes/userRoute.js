@@ -1,9 +1,13 @@
-const router = require("express").Router();
+const express = require("express");
+const router = express.Router();
+const { check, validationResult } = require("express-validator");
 const User = require("../models/userModel");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const config = require("../config/keys");
 
+router.get("/", (req, res) => res.send("users route"));
 
-//register endpoint
 router.post(
   "/register",
   [
@@ -12,41 +16,47 @@ router.post(
     check("password", "password must be 5 charecters").isLength({ min: 5 }),
   ],
   async (req, res) => {
-    const confirm = await User.find({
-      Username: req.body.username,
-      email: req.body.email,
-    });
-    confirm && res.status(400).json("this user or email exist");
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
     try {
-      const salt = await bcrypt.genSalt(10);
-      const hashedPass = await bcrypt.hash(req.body.password, salt);
-
-      const savedPost = await new User({
-        username: req.body.username,
-        email: req.body.email,
-        password: hashedPass,
+      //   console.log(req.body);
+      const { name, email, password } = req.body;
+      let user = await User.findOne({ email });
+      if (user) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: "User already exists" }] });
+      }
+      user = new User({
+        name,
+        email,
+        password,
       });
-      const resultPost = await savedPost.save();
-      res.status(200).json(resultPost);
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+      user.save();
+      const payload = {
+        user: {
+          id: user.id,
+        },
+      };
+      jwt.sign(
+        payload,
+        config.jwtSecret,
+        { expiresIn: 3600 * 24 },
+        (err, token) => {
+          if (err) throw err;
+          res.json({ token });
+        }
+      );
+      //   res.send("User created successfully");
     } catch (error) {
-      res.status(500).json(error);
+      console.error(error);
+      res.status(500).send("server error");
     }
   }
 );
-//login endpoint
-router.post("/login", async (req, res) => {
-  try {
-    const user = await User.findOne({ username: req.body.username });
-    !user && res.status(400).json("wrong user");
 
-    const validate = await bcrypt.compare(req.body.password, user.password);
-    !validate && res.status(400).json("wrong password");
-
-    const { password, ...others } = user._doc;
-
-    res.status(200).json(others);
-  } catch (error) {
-    res.status(500).json(error);
-  }
-});
 module.exports = router;

@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 module.exports = {
-  mongoURI: process.env.MONGODB_PROD,
-  jwtSecret: process.env.MONGODB_JWT_SECRET,
+  mongoURI:
+    "mongodb+srv://joy:12345@cluster0.hqm0ilb.mongodb.net/?retryWrites=true&w=majority",
+  jwtSecret: "backend-secret",
 };

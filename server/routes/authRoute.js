@@ -7,17 +7,8 @@ const config = require("../config/keys");
 const bcrypt = require("bcryptjs");
 const { check, validationResult } = require("express-validator");
 
-router.get("/", auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select("-password");
-    res.json(user);
-  } catch (error) {
-    console.error(error.message);
-  }
-});
-
 router.post(
-  "/",
+  "/login",
   [
     check("email", "Please enter a valid email").isEmail(),
     check("password", "Password is required").exists(),
@@ -54,7 +45,7 @@ router.post(
         { expiresIn: 3600 * 24 },
         (err, token) => {
           if (err) throw err;
-          res.json({ token });
+          res.json({ token, messsage: "login Successful" });
         }
       );
       //res.send("Users created");
